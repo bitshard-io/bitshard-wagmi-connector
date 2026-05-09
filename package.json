@@ -1,6 +1,6 @@
 {
   "name": "@bitshard.io/bitshard-wagmi-connector",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Wagmi connector for the BitShard MPC wallet. Lets dApps connect to a non-custodial 2-of-3 threshold wallet via a hosted popup, with no per-dApp browser extension.",
   "type": "module",
   "main": "./dist/index.js",
