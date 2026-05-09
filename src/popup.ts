@@ -59,6 +59,9 @@ export function openPopup(options: OpenPopupOptions): Promise<PopupResultPayload
             const type = (data as any).type as string;
             if (!type.startsWith('bitshard:')) return;
             if (type === 'bitshard:ready') return;
+            // bitshard:logout and bitshard:walletChanged are handled globally
+            // by the provider; don't resolve/reject any pending action on them.
+            if (type === 'bitshard:walletChanged') return;
             // bitshard:logout is handled globally by the provider; don't
             // resolve/reject any pending action on it (otherwise a user
             // clicking Sign out mid-connect would produce a bogus

@@ -7,6 +7,7 @@ import type {
     BitShardConnectorParameters,
     BitShardSession,
     BitShardTokensPayload,
+    PopupWalletChangedPayload,
     PopupConnectedPayload,
     PopupSignedPayload,
     PopupTokensPayload,
@@ -45,26 +46,44 @@ export class BitShardProvider {
         this.storagePrefix = parameters.storagePrefix;
         this.popupTimeoutMs = parameters.popupTimeoutMs;
         this.session = loadSession(this.storagePrefix);
-        this.installLogoutListener();
+        this.installWalletMessageListener();
     }
 
     /**
-     * Listen for `bitshard:logout` messages from the BitShard wallet origin.
-     * These are posted by the popup's Sign out button (and by the popup's
-     * terminal logged-out page). When received we drop the local session and
-     * emit the wagmi disconnect events so the dApp's UI updates immediately,
-     * without the user needing to also click Disconnect in the dApp.
+     * Listen for wallet-origin messages that are not tied to a single popup
+     * request. Logout disconnects wagmi; walletChanged keeps the dApp account
+     * in sync when the user toggles Local/MPC in a read-only wallet popup.
      */
-    private installLogoutListener(): void {
+    private installWalletMessageListener(): void {
         if (typeof window === 'undefined') return;
         window.addEventListener('message', (event: MessageEvent) => {
             if (event.origin !== this.appOrigin) return;
             const data = event.data;
-            if (!data || typeof data !== 'object' || (data as any).type !== 'bitshard:logout') return;
-            if (!this.session) return;
-            this.setSession(null);
-            this.emit('disconnect');
-            this.emit('accountsChanged', []);
+            if (!data || typeof data !== 'object') return;
+            const type = (data as any).type;
+
+            if (type === 'bitshard:logout') {
+                if (!this.session) return;
+                this.setSession(null);
+                this.emit('disconnect');
+                this.emit('accountsChanged', []);
+                return;
+            }
+
+            if (type === 'bitshard:walletChanged') {
+                const payload = data as PopupWalletChangedPayload;
+                if (!payload.address || !payload.chainId) return;
+                const nextSession: BitShardSession = {
+                    address: payload.address,
+                    chainId: payload.chainId,
+                    walletKind: payload.walletKind,
+                    expiresAt: this.session?.expiresAt ?? Date.now() + SESSION_TTL_MS
+                };
+                this.setSession(nextSession);
+                this.emit('accountsChanged', [nextSession.address]);
+                this.emit('chainChanged', numberToHex(nextSession.chainId));
+                this.emit('bitshard:walletChanged', nextSession);
+            }
         });
     }
 
@@ -201,6 +220,7 @@ export class BitShardProvider {
         const session: BitShardSession = {
             address: result.address,
             chainId: result.chainId,
+            walletKind: result.walletKind,
             expiresAt
         };
         this.setSession(session);
