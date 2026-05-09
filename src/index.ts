@@ -5,10 +5,13 @@ export { DEFAULT_CHAINS } from './chains.js';
 export type {
     BitShardConnectorParameters,
     BitShardSession,
+    BitShardTokenBalance,
+    BitShardTokensPayload,
     PopupAction,
     PopupConnectedPayload,
     PopupSignedPayload,
     PopupTxPayload,
+    PopupTokensPayload,
     PopupErrorPayload,
     PopupResultPayload
 } from './types.js';

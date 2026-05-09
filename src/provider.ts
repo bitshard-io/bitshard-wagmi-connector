@@ -6,8 +6,10 @@ import { clearSession, loadSession, saveSession } from './storage.js';
 import type {
     BitShardConnectorParameters,
     BitShardSession,
+    BitShardTokensPayload,
     PopupConnectedPayload,
     PopupSignedPayload,
+    PopupTokensPayload,
     PopupTxPayload
 } from './types.js';
 
@@ -125,6 +127,8 @@ export class BitShardProvider {
                 return this.handleSign(method, params);
             case 'eth_sendTransaction':
                 return this.handleSendTransaction(params);
+            case 'bitshard_getTokens':
+                return this.getTokens(this.parseOptionalChainId(params[0]));
             case 'wallet_addEthereumChain':
                 return null;
             case 'wallet_getPermissions':
@@ -163,6 +167,23 @@ export class BitShardProvider {
     viewWallet(chainId?: number): Window | null {
         const targetChain = chainId ?? this.currentChainId();
         return openWalletViewer({ appUrl: this.appUrl, chainId: targetChain });
+    }
+
+    /**
+     * Fetch ERC-20 balances for the BitShard wallet selected during connect.
+     * The wallet app performs the authenticated backend request and returns
+     * only token data to the dApp.
+     */
+    async getTokens(chainId?: number): Promise<BitShardTokensPayload> {
+        this.requireSession();
+        const targetChain = chainId ?? this.currentChainId();
+        const url = buildPopupUrl(this.appUrl, 'tokens', { chainId: targetChain });
+        const result = (await openPopup({ url, appOrigin: this.appOrigin, timeoutMs: this.popupTimeoutMs })) as PopupTokensPayload;
+        if (result.type !== 'bitshard:tokens') {
+            throw new Error(`Unexpected popup response type: ${result.type}`);
+        }
+        const { type: _type, ...tokens } = result;
+        return tokens;
     }
 
     private async handleConnect(): Promise<`0x${string}`[]> {
@@ -253,6 +274,16 @@ export class BitShardProvider {
     private async forwardToPublicClient(method: string, params: readonly unknown[]): Promise<unknown> {
         const client = this.getPublicClient(this.currentChainId());
         return client.request({ method: method as any, params: params as any });
+    }
+
+    private parseOptionalChainId(value: unknown): number | undefined {
+        if (value === undefined || value === null) return undefined;
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') return value.startsWith('0x') ? parseInt(value, 16) : Number(value);
+        if (typeof value === 'object' && 'chainId' in value) {
+            return this.parseOptionalChainId((value as { chainId?: unknown }).chainId);
+        }
+        return undefined;
     }
 
     private getPublicClient(chainId: number): PublicClient {

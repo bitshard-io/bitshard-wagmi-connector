@@ -112,7 +112,7 @@ export function openPopup(options: OpenPopupOptions): Promise<PopupResultPayload
  */
 export function buildPopupUrl(
     appUrl: string,
-    action: 'connect' | 'sign' | 'tx' | 'view',
+    action: 'connect' | 'sign' | 'tx' | 'view' | 'tokens',
     params: Record<string, string | number | undefined | null>
 ): string {
     const base = appUrl.replace(/\/$/, '');

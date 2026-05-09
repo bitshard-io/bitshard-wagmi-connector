@@ -32,7 +32,31 @@ export interface BitShardSession {
     expiresAt: number;
 }
 
-export type PopupAction = 'connect' | 'sign' | 'tx' | 'view';
+export type PopupAction = 'connect' | 'sign' | 'tx' | 'view' | 'tokens';
+
+export interface BitShardTokenBalance {
+    contractAddress: `0x${string}`;
+    tokenName?: string;
+    tokenSymbol?: string;
+    tokenDecimal?: string;
+    balance?: string;
+    rawBalance?: string;
+    logo?: string | null;
+}
+
+export interface BitShardTokensPayload {
+    address: `0x${string}`;
+    chainId: number;
+    walletKind: 'mpc' | 'local';
+    nativeBalance?: {
+        symbol?: string;
+        name?: string;
+        balance?: string;
+        rawBalance?: string;
+    };
+    tokens: BitShardTokenBalance[];
+    count: number;
+}
 
 export interface PopupConnectedPayload {
     type: 'bitshard:connected';
@@ -51,6 +75,10 @@ export interface PopupTxPayload {
     hash: `0x${string}`;
 }
 
+export interface PopupTokensPayload extends BitShardTokensPayload {
+    type: 'bitshard:tokens';
+}
+
 export interface PopupErrorPayload {
     type: 'bitshard:error';
     message: string;
@@ -61,4 +89,5 @@ export type PopupResultPayload =
     | PopupConnectedPayload
     | PopupSignedPayload
     | PopupTxPayload
+    | PopupTokensPayload
     | PopupErrorPayload;
